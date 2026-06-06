@@ -4,7 +4,6 @@
   "references": [
     "Dreamy.DataConfig.Runtime",
     "UniTask",
-    "UnityEngine.TestRunner",
     "UnityEditor.TestRunner"
   ],
   "optionalUnityReferences": [
