@@ -1,0 +1,19 @@
+{
+  "name": "Dreamy.DataConfig.Editor",
+  "rootNamespace": "Dreamy.DataConfig.Editor",
+  "references": [
+    "Dreamy.DataConfig.Runtime",
+    "Unity.Newtonsoft.Json"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "rows": [
+    {
+      "id": "item_001",
+      "name": "Wood Sword",
+      "price": 100
+    }
+  ]
+}
