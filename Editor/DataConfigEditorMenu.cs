@@ -13,6 +13,12 @@ namespace Dreamy.DataConfig.Editor
         private const string ConfigFolder = "Assets/Resources/DataConfig";
         private const string JsonSearchPattern = "*.json";
 
+        [MenuItem("Tools/Dreamy/Data Config/Open Editor")]
+        public static void OpenEditor()
+        {
+            DataConfigWindow.Open();
+        }
+
         [MenuItem("Tools/Dreamy/Data Config/Validate All")]
         public static void ValidateAll()
         {
@@ -67,13 +73,23 @@ namespace Dreamy.DataConfig.Editor
             EditorGUIUtility.PingObject(folder);
         }
 
-        private static void ValidateFile(string path)
+        internal static void ValidateFile(string path)
         {
-            JObject root = JObject.Parse(File.ReadAllText(path));
+            ValidateJson(File.ReadAllText(path));
+        }
+
+        internal static void ValidateJson(string json)
+        {
+            JObject root = JObject.Parse(json);
             JToken rowsToken = root["rows"];
+            if (rowsToken == null)
+            {
+                return;
+            }
+
             if (rowsToken is not JArray rows)
             {
-                throw new JsonException("Required array 'rows' is missing.");
+                throw new JsonException("'rows' must be an array.");
             }
 
             HashSet<string> ids = new(StringComparer.Ordinal);

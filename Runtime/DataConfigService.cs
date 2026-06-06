@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using Newtonsoft.Json;
@@ -20,7 +21,7 @@ namespace Dreamy.DataConfig
         public bool IsInitialized { get; private set; }
 
         public void Register<TTable>(string documentName)
-            where TTable : class, IDataConfigTable
+            where TTable : ConfigBase
         {
             if (IsInitialized)
             {
@@ -36,11 +37,48 @@ namespace Dreamy.DataConfig
             }
 
             Type tableType = typeof(TTable);
+            EnsureDocumentNameAvailable(tableType, documentName);
             if (!registrations.TryAdd(tableType, documentName))
             {
                 throw new InvalidOperationException(
                     $"{tableType.Name} is already registered.");
             }
+        }
+
+        public int RegisterAllConfigs()
+        {
+            if (IsInitialized)
+            {
+                throw new InvalidOperationException(
+                    "Configs cannot be registered after initialization.");
+            }
+
+            int registeredCount = 0;
+            foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                foreach (Type type in GetLoadableTypes(assembly))
+                {
+                    if (type.IsAbstract ||
+                        type.IsGenericTypeDefinition ||
+                        (!type.IsPublic && !type.IsNestedPublic) ||
+                        !typeof(ConfigBase).IsAssignableFrom(type))
+                    {
+                        continue;
+                    }
+
+                    if (registrations.ContainsKey(type))
+                    {
+                        continue;
+                    }
+
+                    string documentName = ConfigBase.ResolveDocumentName(type);
+                    EnsureDocumentNameAvailable(type, documentName);
+                    registrations.Add(type, documentName);
+                    registeredCount++;
+                }
+            }
+
+            return registeredCount;
         }
 
         public async UniTask InitializeAsync(
@@ -56,7 +94,7 @@ namespace Dreamy.DataConfig
         }
 
         public TTable GetTable<TTable>()
-            where TTable : class, IDataConfigTable
+            where TTable : ConfigBase
         {
             EnsureInitialized();
 
@@ -70,7 +108,7 @@ namespace Dreamy.DataConfig
         }
 
         public bool TryGetTable<TTable>(out TTable table)
-            where TTable : class, IDataConfigTable
+            where TTable : ConfigBase
         {
             EnsureInitialized();
 
@@ -173,6 +211,45 @@ namespace Dreamy.DataConfig
             {
                 throw new InvalidOperationException(
                     "DataConfigService must be initialized before querying tables.");
+            }
+        }
+
+        private void EnsureDocumentNameAvailable(
+            Type configType,
+            string documentName)
+        {
+            foreach (KeyValuePair<Type, string> registration in registrations)
+            {
+                if (string.Equals(
+                    registration.Value,
+                    documentName,
+                    StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException(
+                        $"{configType.Name} and {registration.Key.Name} use " +
+                        $"the same document name '{documentName}'.");
+                }
+            }
+        }
+
+        private static IEnumerable<Type> GetLoadableTypes(Assembly assembly)
+        {
+            try
+            {
+                return assembly.GetTypes();
+            }
+            catch (ReflectionTypeLoadException exception)
+            {
+                List<Type> types = new();
+                foreach (Type type in exception.Types)
+                {
+                    if (type != null)
+                    {
+                        types.Add(type);
+                    }
+                }
+
+                return types;
             }
         }
     }

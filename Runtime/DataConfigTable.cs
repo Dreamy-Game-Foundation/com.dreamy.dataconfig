@@ -5,20 +5,14 @@ using Newtonsoft.Json;
 namespace Dreamy.DataConfig
 {
     [Serializable]
-    public class DataConfigTable<TRow> : IDataConfigTable
+    public class DataConfigTable<TRow> : ConfigBase
         where TRow : DataConfigRow
     {
-        [JsonProperty("schemaVersion")]
-        private int schemaVersion = 1;
-
         [JsonProperty("rows", Required = Required.Always)]
         private List<TRow> rows = new();
 
         [JsonIgnore]
         private IReadOnlyDictionary<string, TRow> rowsById;
-
-        [JsonIgnore]
-        public int SchemaVersion => schemaVersion;
 
         public IReadOnlyList<TRow> GetAll()
         {
@@ -47,7 +41,7 @@ namespace Dreamy.DataConfig
             return rowsById.TryGetValue(id, out row);
         }
 
-        public virtual void Initialize(string documentName)
+        public override void Initialize(string documentName)
         {
             Dictionary<string, TRow> index = new(StringComparer.Ordinal);
 

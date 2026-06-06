@@ -8,15 +8,17 @@ namespace Dreamy.DataConfig
         bool IsInitialized { get; }
 
         void Register<TTable>(string documentName)
-            where TTable : class, IDataConfigTable;
+            where TTable : ConfigBase;
+
+        int RegisterAllConfigs();
 
         UniTask InitializeAsync(CancellationToken cancellationToken = default);
 
         TTable GetTable<TTable>()
-            where TTable : class, IDataConfigTable;
+            where TTable : ConfigBase;
 
         bool TryGetTable<TTable>(out TTable table)
-            where TTable : class, IDataConfigTable;
+            where TTable : ConfigBase;
 
         UniTask ReloadAsync(CancellationToken cancellationToken = default);
     }

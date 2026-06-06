@@ -26,7 +26,7 @@ namespace Dreamy.DataConfig
             string documentName,
             CancellationToken cancellationToken = default)
         {
-            for (int index = sources.Count - 1; index >= 0; index--)
+            for (int index = 0; index < sources.Count; index++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
@@ -38,7 +38,7 @@ namespace Dreamy.DataConfig
                 }
                 catch (DataConfigDocumentNotFoundException)
                 {
-                    // A later source overrides an earlier source when present.
+                    // Continue to the next fallback source.
                 }
             }
 
