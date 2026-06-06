@@ -3,8 +3,7 @@
   "rootNamespace": "Dreamy.DataConfig.Tests",
   "references": [
     "Dreamy.DataConfig.Runtime",
-    "UniTask",
-    "UnityEditor.TestRunner"
+    "UniTask"
   ],
   "optionalUnityReferences": [
     "TestAssemblies"
