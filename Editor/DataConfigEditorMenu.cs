@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Reflection;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using UnityEditor;
@@ -73,6 +75,56 @@ namespace Dreamy.DataConfig.Editor
             EditorGUIUtility.PingObject(folder);
         }
 
+        [MenuItem("Tools/Dreamy/Data Config/Create Missing JSON")]
+        public static void CreateMissingJson()
+        {
+            Directory.CreateDirectory(ConfigFolder);
+
+            int createdCount = 0;
+            int skippedCount = 0;
+            foreach (Type type in FindConfigTypes())
+            {
+                ConfigBase config;
+                try
+                {
+                    config = Activator.CreateInstance(type) as ConfigBase;
+                }
+                catch (Exception exception)
+                {
+                    Debug.LogError(
+                        $"Dreamy DataConfig: cannot create {type.FullName}: " +
+                        exception.Message);
+                    continue;
+                }
+
+                if (config == null)
+                {
+                    continue;
+                }
+
+                string path = Path.Combine(
+                    ConfigFolder,
+                    config.DocumentName + ".json");
+                if (File.Exists(path))
+                {
+                    skippedCount++;
+                    continue;
+                }
+
+                string json = JsonConvert.SerializeObject(
+                    config,
+                    Formatting.Indented,
+                    DataConfigJson.Settings);
+                File.WriteAllText(path, json);
+                createdCount++;
+            }
+
+            AssetDatabase.Refresh();
+            Debug.Log(
+                $"Dreamy DataConfig: created {createdCount} JSON file(s), " +
+                $"skipped {skippedCount} existing file(s).");
+        }
+
         internal static void ValidateFile(string path)
         {
             ValidateJson(File.ReadAllText(path));
@@ -107,6 +159,35 @@ namespace Dreamy.DataConfig.Editor
                     throw new JsonException(
                         $"Row {index} contains duplicate id '{id}'.");
                 }
+            }
+        }
+
+        private static IEnumerable<Type> FindConfigTypes()
+        {
+            foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                foreach (Type type in GetLoadableTypes(assembly))
+                {
+                    if (!type.IsAbstract &&
+                        !type.IsGenericTypeDefinition &&
+                        (type.IsPublic || type.IsNestedPublic) &&
+                        typeof(ConfigBase).IsAssignableFrom(type))
+                    {
+                        yield return type;
+                    }
+                }
+            }
+        }
+
+        private static IEnumerable<Type> GetLoadableTypes(Assembly assembly)
+        {
+            try
+            {
+                return assembly.GetTypes();
+            }
+            catch (ReflectionTypeLoadException exception)
+            {
+                return exception.Types.Where(type => type != null);
             }
         }
     }

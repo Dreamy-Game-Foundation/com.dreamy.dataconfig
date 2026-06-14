@@ -2,6 +2,10 @@
 
 Typed, read-only game configuration loaded primarily from JSON.
 
+Use `Tools/Dreamy/Data Config/Create Missing JSON` to scan concrete public
+`ConfigBase` types and create missing files under
+`Assets/Resources/DataConfig`. Existing JSON files are never overwritten.
+
 ## Setup
 
 Install UniTask and Newtonsoft JSON in the consuming project. Each config
