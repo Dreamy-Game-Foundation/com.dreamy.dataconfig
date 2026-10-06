@@ -1,57 +1,56 @@
 # Dreamy Data Config
 
-Typed, read-only game configuration loaded primarily from JSON.
+Package thuộc Dreamy Game Studio. Hướng dẫn dưới đây mô tả cấu trúc, cách cài vào project và tích hợp ở root/scene.
 
-Use `Tools/Dreamy/Data Config/Create Missing JSON` to scan concrete public
-`ConfigBase` types and create missing files under
-`Assets/Resources/DataConfig`. Existing JSON files are never overwritten.
+## Cài package
 
-## Setup
+Dùng Unity 6000.0 trở lên. Sandbox đã tham chiếu package bằng `file:../LocalPackages/com.dreamy.dataconfig`. Project khác dùng Package Manager > + > Install package from disk và chọn package.json, hoặc Git URL của repository nội bộ. Cài cả dependency Dreamy/Git vào manifest của game; version dependency không tự cấu hình registry riêng.
 
-Install UniTask and Newtonsoft JSON in the consuming project. Each config
-inherits `ConfigBase`. Use `DataConfigAttribute` when the JSON document name
-should not be inferred from the class name:
+Dependency trực tiếp theo package.json:
+
+- `com.unity.nuget.newtonsoft-json` (3.2.1)
+
+## Cấu trúc và asmdef
+
+| Assembly | Reference | Phạm vi |
+| --- | --- | --- |
+| `Dreamy.DataConfig.Editor` | Dreamy.DataConfig.Runtime, Unity.Newtonsoft.Json | Chỉ Editor |
+| `Dreamy.DataConfig.Runtime` | UniTask, Unity.Newtonsoft.Json | Runtime |
+
+Trong asmdef của game, thêm assembly chứa API trực tiếp sử dụng. Code bootstrap reference thêm Core/DataConfig/Datasave/Economy theo nhu cầu; code async reference UniTask. Code gọi type sample reference assembly sample. Giữ Editor reference trong asmdef Editor-only.
+
+## Cấu trúc và dữ liệu
+
+Runtime chứa ConfigBase, DataConfigTable, DataConfigService và các nguồn JSON. Editor cung cấp trình sửa/validate. DataConfig giữ dữ liệu thiết kế chỉ đọc; tiến trình người chơi nằm trong Datasave.
+
+JSON mặc định ở Assets/Resources/DataConfig/<documentName>.json. Mỗi document chỉ có một bản theo đường dẫn Resources. Config kế thừa ConfigBase; table có thể kế thừa DataConfigTable<T>. Dùng DataConfigAttribute để đặt tên document hoặc Register<T>(documentName) ở root.
+
+## Khởi tạo ở GameInstaller
 
 ```csharp
-[DataConfig("items")]
-public sealed class ItemConfig : DataConfigTable<ItemRow>
-{
-}
+using Dreamy.DataConfig;
+using Dreamy.Core;
 
-var source = DataConfigSources.CreateDefault(remoteProvider);
-var service = new DataConfigService(source);
-service.RegisterAllConfigs();
-await service.InitializeAsync();
-
-var item = service.GetTable<ItemConfig>().GetById("item_001");
+var dataConfig = new DataConfigService(new ResourcesJsonConfigSource());
+// Đăng ký config của game/feature trước khi initialize.
+ShopInstaller.RegisterConfig(dataConfig); // Chỉ khi đã cài Dreamy Shop.
+await dataConfig.InitializeAsync(cancellationToken);
+ServiceLocator.Register<IDataConfigService>(dataConfig);
 ```
 
-The default source reads
-`Assets/Resources/DataConfig/<documentName>.json`.
+Đoạn này chạy trong method async UniTask; cancellationToken thuộc root. Dùng Dreamy.Shop cho ShopInstaller nếu lấy ví dụ trên. Với nhiều feature, gọi tất cả RegisterConfig trước cùng một InitializeAsync, rồi cài các service feature sau đó. Không tạo lại DataConfig trong từng panel.
 
-`remoteProvider` is optional and implements `IRemoteConfigProvider`. When it
-returns JSON, the remote value wins. When it returns empty or throws, the
-service falls back to the local Resources JSON.
+DataConfigSources.CreateDefault(remoteProvider) hỗ trợ nguồn remote và fallback JSON local. CompositeConfigSource dùng để ghép nguồn; nguồn sau có thể ghi đè nguồn trước. InMemoryConfigSource phù hợp cho fixture.
 
-Register the initialized `IDataConfigService` once in the project's
-`GameInstaller`.
+Asmdef Runtime hiện reference UniTask, nên project phải cài UniTask dù manifest package chưa khai báo nó. Code bootstrap dùng Core cần reference Dreamy.Core.Runtime.
 
-## Data ownership
+## Công cụ Editor
 
-- DataConfig: read-only design data such as items, levels, and balance.
-- Datasave: writable player progress and settings.
+Tools/Dreamy/Data Config/Create Missing JSON tạo file thiếu, không ghi đè file có sẵn. Open Editor cho phép xem Text/Table, sửa và validate JSON. Chạy Validate All sau khi sửa catalog. Root unregister IDataConfigService khi kết thúc lifecycle sở hữu.
+## Sample
 
-Use `InMemoryConfigSource` for tests. Use `CompositeConfigSource` when a
-later source should override an earlier source.
+Manifest hiện không khai báo sample để import qua Package Manager.
 
-## Validation
+## Addressables
 
-Open `Tools/Dreamy/Data Config/Open Editor` to:
-
-- Find JSON files across the project.
-- Save favorite files for quick access.
-- Edit raw JSON in Text view.
-- Edit object properties or row data in Table view.
-- Validate and save changes.
-
-Run `Tools/Dreamy/Data Config/Validate All` for batch validation.
+Package này không có panel cần đăng ký vào Addressables Group. Việc đặt address của prefab/asset thuộc game hoặc package UI/Assets; không dùng Addressables thay bước đăng ký service/config/save.
